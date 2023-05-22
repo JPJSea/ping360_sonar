@@ -41,66 +41,75 @@ oscillate = None
 
 
 def callback(config, level):
-    global updated, gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, \
-        speedOfSound, samplePeriod, debug, step, imgSize, queue_size, threshold, firstRequest
+    global updated, gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, speedOfSound, samplePeriod, debug, step, imgSize, queue_size, threshold, firstRequest
     if not firstRequest:  # Avoid overiting params set in the launch file
         rospy.loginfo("Reconfigure Request")
         # Update Ping 360 Parameters
-        gain = config['gain']
-        numberOfSamples = config['numberOfSamples']
-        transmitFrequency = config['transmitFrequency']
-        sonarRange = config['range']
-        speedOfSound = config['speedOfSound']
+        gain = config["gain"]
+        numberOfSamples = config["numberOfSamples"]
+        transmitFrequency = config["transmitFrequency"]
+        sonarRange = config["range"]
+        speedOfSound = config["speedOfSound"]
         samplePeriod = calculateSamplePeriod(
-            sonarRange, numberOfSamples, speedOfSound)
+            sonarRange, numberOfSamples, speedOfSound
+        )
         transmitDuration = adjustTransmitDuration(
-            sonarRange, samplePeriod, speedOfSound)
-        debug = config['debug']
-        step = config['step']
-        queue_size = config['queueSize']
-        threshold = config['threshold']
+            sonarRange, samplePeriod, speedOfSound
+        )
+        debug = config["debug"]
+        step = config["step"]
+        queue_size = config["queueSize"]
+        threshold = config["threshold"]
         updated = True
     firstRequest = False
     return config
 
 
 def main():
-    global updated, gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, \
-        speedOfSound, samplePeriod, debug, step, imgSize, queue_size, threshold, \
-        enableDataTopic, enableImageTopic, enableScanTopic, oscillate
+    global updated, gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, speedOfSound, samplePeriod, debug, step, imgSize, queue_size, threshold, enableDataTopic, enableImageTopic, enableScanTopic, oscillate
 
     # Initialize node
-    rospy.init_node('ping360_node')
+    rospy.init_node("ping360_node")
 
     # Ping 360 Parameters
-    device = rospy.get_param('~device', "/dev/ttyUSB0")
-    baudrate = rospy.get_param('~baudrate', 115200)
-    gain = rospy.get_param('~gain', 0)
-    numberOfSamples = rospy.get_param('~numberOfSamples', 200)  # Number of points
+    device = rospy.get_param("~device", "/dev/ttyUSB0")
+    baudrate = rospy.get_param("~baudrate", 115200)
+    udp = rospy.get_param("udp", False)
+    address = rospy.get_param("address", "192.168.1.2")
+    port = rospy.get_param("port", 1234)
+
+    gain = rospy.get_param("~gain", 0)
+    numberOfSamples = rospy.get_param(
+        "~numberOfSamples", 200
+    )  # Number of points
     transmitFrequency = rospy.get_param(
-        '~transmitFrequency', 740)  # Default frequency
-    sonarRange = rospy.get_param('~sonarRange', 1)  # in m
-    speedOfSound = rospy.get_param('~speedOfSound', 1500)  # in m/s
-    samplePeriod = calculateSamplePeriod(sonarRange, numberOfSamples, speedOfSound)
+        "~transmitFrequency", 740
+    )  # Default frequency
+    sonarRange = rospy.get_param("~sonarRange", 1)  # in m
+    speedOfSound = rospy.get_param("~speedOfSound", 1500)  # in m/s
+    samplePeriod = calculateSamplePeriod(
+        sonarRange, numberOfSamples, speedOfSound
+    )
     transmitDuration = adjustTransmitDuration(
-        sonarRange, samplePeriod, speedOfSound)
-    debug = rospy.get_param('~debug', True)
-    threshold = int(rospy.get_param('~threshold', 200))  # 0-255
+        sonarRange, samplePeriod, speedOfSound
+    )
+    debug = rospy.get_param("~debug", True)
+    threshold = int(rospy.get_param("~threshold", 200))  # 0-255
 
-    enableImageTopic = rospy.get_param('~enableImageTopic', True)
-    enableScanTopic = rospy.get_param('~enableScanTopic', True)
-    enableDataTopic = rospy.get_param('~enableDataTopic', True)
+    enableImageTopic = rospy.get_param("~enableImageTopic", True)
+    enableScanTopic = rospy.get_param("~enableScanTopic", True)
+    enableDataTopic = rospy.get_param("~enableDataTopic", True)
 
-    maxAngle = int(rospy.get_param('~maxAngle', 400))  # 0-400
-    minAngle = int(rospy.get_param('~minAngle', 0))  # 0-400
+    maxAngle = int(rospy.get_param("~maxAngle", 400))  # 0-400
+    minAngle = int(rospy.get_param("~minAngle", 0))  # 0-400
     FOV = maxAngle - minAngle  # The sonars field of view
-    oscillate = int(rospy.get_param('~oscillate', True))
+    oscillate = int(rospy.get_param("~oscillate", True))
     sign = 1
 
     # Output and ROS parameters
-    step = int(rospy.get_param('~step', 1))
-    imgSize = int(rospy.get_param('~imgSize', 500))
-    queue_size = int(rospy.get_param('~queueSize', 1))
+    step = int(rospy.get_param("~step", 1))
+    imgSize = int(rospy.get_param("~imgSize", 500))
+    queue_size = int(rospy.get_param("~queueSize", 1))
 
     # TODO: improve configuration validation
     if FOV <= 0:
@@ -108,7 +117,10 @@ def main():
             """
             minAngle should be inferior to the maxAngle!
             Current settings:
-                minAngle: {} - maxAngle: {}""".format(maxAngle, minAngle))
+                minAngle: {} - maxAngle: {}""".format(
+                maxAngle, minAngle
+            )
+        )
         rospy.signal_shutdown("Bad minAngle & maxAngle values")
         return
 
@@ -117,15 +129,22 @@ def main():
             """
             The configured step is bigger then the set FOV (maxAngle - minAngle)
             Current settings:
-                step: {} - minAngle: {} - maxAngle: {} - FOV: {}""".format(step,
-                                                                           maxAngle,
-                                                                           minAngle,
-                                                                           FOV))
+                step: {} - minAngle: {} - maxAngle: {} - FOV: {}""".format(
+                step, maxAngle, minAngle, FOV
+            )
+        )
         rospy.signal_shutdown("Bad minAngle & maxAngle or step values")
         return
 
     # Initialize sensor
-    sensor = Ping360(device, baudrate)
+
+    # Make a new Ping
+    sensor = Ping360()
+    if not udp:
+        sensor.connect_serial(device, baudrate)
+    else:
+        sensor.connect_udp(address, int(port))
+
     print("Initialized Sensor: %s" % sensor.initialize())
 
     # Dynamic reconfigure server
@@ -137,15 +156,24 @@ def main():
 
     # Topic publishers
     imagePub = rospy.Publisher(
-        "/ping360_node/sonar/images", Image, queue_size=queue_size)
-    rawPub = rospy.Publisher("/ping360_node/sonar/data",
-                             SonarEcho, queue_size=queue_size)
+        "/ping360_node/sonar/images", Image, queue_size=queue_size
+    )
+    rawPub = rospy.Publisher(
+        "/ping360_node/sonar/data", SonarEcho, queue_size=queue_size
+    )
     laserPub = rospy.Publisher(
-        "/ping360_node/sonar/scan", LaserScan, queue_size=queue_size)
+        "/ping360_node/sonar/scan", LaserScan, queue_size=queue_size
+    )
 
     # Initialize and configure the sonar
-    updateSonarConfig(sensor, gain, transmitFrequency,
-                      transmitDuration, samplePeriod, numberOfSamples)
+    updateSonarConfig(
+        sensor,
+        gain,
+        transmitFrequency,
+        transmitDuration,
+        samplePeriod,
+        numberOfSamples,
+    )
 
     # Create a new mono-channel image
     image = np.zeros((imgSize, imgSize, 1), np.uint8)
@@ -162,14 +190,28 @@ def main():
     while not rospy.is_shutdown():
         # Update to the latest config data
         if updated:
-            updateSonarConfig(sensor, gain, transmitFrequency,
-                              transmitDuration, samplePeriod, numberOfSamples)
+            updateSonarConfig(
+                sensor,
+                gain,
+                transmitFrequency,
+                transmitDuration,
+                samplePeriod,
+                numberOfSamples,
+            )
         # Get sonar response
         data = getSonarData(sensor, angle)
 
         # Contruct and publish Sonar data msg
         if enableDataTopic:
-            rawDataMsg = generateRawMsg(angle, data, gain, numberOfSamples, transmitFrequency, speedOfSound, sonarRange)
+            rawDataMsg = generateRawMsg(
+                angle,
+                data,
+                gain,
+                numberOfSamples,
+                transmitFrequency,
+                speedOfSound,
+                sonarRange,
+            )
             rawPub.publish(rawDataMsg)
 
         # Prepare scan msg
@@ -180,17 +222,24 @@ def main():
                     detectedIndex = data.index(detectedIntensity)
                     # The index+1 represents the number of samples which then can be used to deduce the range
                     distance = calculateRange(
-                        (1 + detectedIndex), samplePeriod, speedOfSound)
+                        (1 + detectedIndex), samplePeriod, speedOfSound
+                    )
                     if distance >= 0.75 and distance <= sonarRange:
                         ranges[0] = distance
                         intensities[0] = detectedIntensity
                         if debug:
-                            print("Object at {} grad : {}m - {}%".format(angle,
-                                                                         ranges[0],
-                                                                         float(intensities[0] * 100 / 255)))
+                            print(
+                                "Object at {} grad : {}m - {}%".format(
+                                    angle,
+                                    ranges[0],
+                                    float(intensities[0] * 100 / 255),
+                                )
+                            )
                         break
             # Contruct and publish Sonar scan msg
-            scanDataMsg = generateScanMsg(ranges, intensities, sonarRange, step, maxAngle, minAngle)
+            scanDataMsg = generateScanMsg(
+                ranges, intensities, sonarRange, step, maxAngle, minAngle
+            )
             laserPub.publish(scanDataMsg)
 
         # Contruct and publish Sonar image msg
@@ -198,7 +247,7 @@ def main():
             linear_factor = float(len(data)) / float(center[0])
             try:
                 for i in range(int(center[0])):
-                    if(i < center[0]):
+                    if i < center[0]:
                         pointColor = data[int(i * linear_factor - 1)]
                     else:
                         pointColor = 0
@@ -206,11 +255,13 @@ def main():
                         theta = 2 * pi * (angle + k) / 400.0
                         x = float(i) * cos(theta)
                         y = float(i) * sin(theta)
-                        image[int(center[0] + x)][int(center[1] + y)
-                                                  ][0] = pointColor
+                        image[int(center[0] + x)][int(center[1] + y)][
+                            0
+                        ] = pointColor
             except IndexError:
                 rospy.logwarn(
-                    "IndexError: data response was empty, skipping this iteration..")
+                    "IndexError: data response was empty, skipping this iteration.."
+                )
                 continue
 
             publishImage(image, imagePub, bridge)
@@ -240,11 +291,19 @@ def getSonarData(sensor, angle):
         list: Intensities from 0 - 255
     """
     sensor.transmitAngle(angle)
-    data = bytearray(getattr(sensor, '_data'))
+    data = bytearray(getattr(sensor, "_data"))
     return [k for k in data]
 
 
-def generateRawMsg(angle, data, gain, numberOfSamples, transmitFrequency, speedOfSound, sonarRange):
+def generateRawMsg(
+    angle,
+    data,
+    gain,
+    numberOfSamples,
+    transmitFrequency,
+    speedOfSound,
+    sonarRange,
+):
     """
     Generates the raw message for the data topic
     Args:
@@ -257,10 +316,10 @@ def generateRawMsg(angle, data, gain, numberOfSamples, transmitFrequency, speedO
         sonarRange (int)
     Returns:
         SonarEcho: message
-     """
+    """
     msg = SonarEcho()
     msg.header.stamp = rospy.Time.now()
-    msg.header.frame_id = 'sonar_frame'
+    msg.header.frame_id = "sonar_frame"
     msg.angle = angle
     msg.gain = gain
     msg.number_of_samples = numberOfSamples
@@ -279,15 +338,15 @@ def generateScanMsg(ranges, intensities, sonarRange, step, maxAngle, minAngle):
         data (list): List of intensities
         sonarRange (int)
         step (int)
-     """
+    """
     msg = LaserScan()
     msg.header.stamp = rospy.Time.now()
-    msg.header.frame_id = 'sonar_frame'
+    msg.header.frame_id = "sonar_frame"
     msg.angle_min = 2 * pi * minAngle / 400
     msg.angle_max = 2 * pi * maxAngle / 400
     msg.angle_increment = 2 * pi * step / 400
     msg.time_increment = 0
-    msg.range_min = .75
+    msg.range_min = 0.75
     msg.range_max = sonarRange
     msg.ranges = ranges
     msg.intensities = intensities
@@ -303,40 +362,60 @@ def publishImage(image, imagePub, bridge):
         print(e)
 
 
-def calculateRange(numberOfSamples, samplePeriod, speedOfSound, _samplePeriodTickDuration=25e-9):
+def calculateRange(
+    numberOfSamples, samplePeriod, speedOfSound, _samplePeriodTickDuration=25e-9
+):
     # type: (float, int, float, float) -> float
     """
-      Calculate the range based in the duration
-     """
-    return numberOfSamples * speedOfSound * _samplePeriodTickDuration * samplePeriod / 2
+    Calculate the range based in the duration
+    """
+    return (
+        numberOfSamples
+        * speedOfSound
+        * _samplePeriodTickDuration
+        * samplePeriod
+        / 2
+    )
 
 
-def calculateSamplePeriod(distance, numberOfSamples, speedOfSound, _samplePeriodTickDuration=25e-9):
+def calculateSamplePeriod(
+    distance, numberOfSamples, speedOfSound, _samplePeriodTickDuration=25e-9
+):
     # type: (float, int, int, float) -> float
     """
-      Calculate the sample period based in the new range
-     """
-    return 2 * distance / (numberOfSamples * speedOfSound * _samplePeriodTickDuration)
+    Calculate the sample period based in the new range
+    """
+    return (
+        2
+        * distance
+        / (numberOfSamples * speedOfSound * _samplePeriodTickDuration)
+    )
 
 
-def adjustTransmitDuration(distance, samplePeriod, speedOfSound, _firmwareMinTransmitDuration=5):
+def adjustTransmitDuration(
+    distance, samplePeriod, speedOfSound, _firmwareMinTransmitDuration=5
+):
     # type: (float, float, int, int) -> float
     """
-     @brief Adjust the transmit duration for a specific range
-     Per firmware engineer:
-     1. Starting point is TxPulse in usec = ((one-way range in metres) * 8000) / (Velocity of sound in metres
-     per second)
-     2. Then check that TxPulse is wide enough for currently selected sample interval in usec, i.e.,
-          if TxPulse < (2.5 * sample interval) then TxPulse = (2.5 * sample interval)
-        (transmit duration is microseconds, samplePeriod() is nanoseconds)
-     3. Perform limit checking
-     Returns:
-        float: Transmit duration
-     """
+    @brief Adjust the transmit duration for a specific range
+    Per firmware engineer:
+    1. Starting point is TxPulse in usec = ((one-way range in metres) * 8000) / (Velocity of sound in metres
+    per second)
+    2. Then check that TxPulse is wide enough for currently selected sample interval in usec, i.e.,
+         if TxPulse < (2.5 * sample interval) then TxPulse = (2.5 * sample interval)
+       (transmit duration is microseconds, samplePeriod() is nanoseconds)
+    3. Perform limit checking
+    Returns:
+       float: Transmit duration
+    """
     duration = 8000 * distance / speedOfSound
     transmit_duration = max(
-        2.5 * getSamplePeriod(samplePeriod) / 1000, duration)
-    return max(_firmwareMinTransmitDuration, min(transmitDurationMax(samplePeriod), transmit_duration))
+        2.5 * getSamplePeriod(samplePeriod) / 1000, duration
+    )
+    return max(
+        _firmwareMinTransmitDuration,
+        min(transmitDurationMax(samplePeriod), transmit_duration),
+    )
 
 
 def transmitDurationMax(samplePeriod, _firmwareMaxTransmitDuration=500):
@@ -349,16 +428,25 @@ def transmitDurationMax(samplePeriod, _firmwareMaxTransmitDuration=500):
     Returns:
         float: The maximum transmit duration possible
     """
-    return min(_firmwareMaxTransmitDuration, getSamplePeriod(samplePeriod) * 64e6)
+    return min(
+        _firmwareMaxTransmitDuration, getSamplePeriod(samplePeriod) * 64e6
+    )
 
 
 def getSamplePeriod(samplePeriod, _samplePeriodTickDuration=25e-9):
     # type: (float, float) -> float
-    """  Sample period in ns """
+    """Sample period in ns"""
     return samplePeriod * _samplePeriodTickDuration
 
 
-def updateSonarConfig(sensor, gain, transmitFrequency, transmitDuration, samplePeriod, numberOfSamples):
+def updateSonarConfig(
+    sensor,
+    gain,
+    transmitFrequency,
+    transmitDuration,
+    samplePeriod,
+    numberOfSamples,
+):
     global updated
     sensor.set_gain_setting(gain)
     sensor.set_transmit_frequency(transmitFrequency)
