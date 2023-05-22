@@ -9,14 +9,14 @@ from brping import pingmessage
 from collections import deque
 
 import os
-if os.getenv('emulated_sonar') == 'true':
-    import Emulator as serial
+
+if os.getenv("emulated_sonar") == "true":
+    from . import Emulator as serial
 else:
     import serial
 
 
 class PingDevice(object):
-
     _input_buffer = deque()
 
     def __init__(self, device_name, baudrate=115200):
@@ -78,7 +78,7 @@ class PingDevice(object):
     #
     # @return True if the device replies with expected data, False otherwise
     def initialize(self):
-        if (self.request(definitions.COMMON_PROTOCOL_VERSION) is None):
+        if self.request(definitions.COMMON_PROTOCOL_VERSION) is None:
             return False
         return True
 
@@ -132,11 +132,15 @@ class PingDevice(object):
 
         if msg.message_id in pingmessage.payload_dict:
             try:
-                for attr in pingmessage.payload_dict[msg.message_id]["field_names"]:
+                for attr in pingmessage.payload_dict[msg.message_id][
+                    "field_names"
+                ]:
                     setattr(self, "_" + attr, getattr(msg, attr))
             except AttributeError as e:
-                print("attribute error while handling msg %d (%s): %s" %
-                      (msg.message_id, msg.name, msg.msg_data))
+                print(
+                    "attribute error while handling msg %d (%s): %s"
+                    % (msg.message_id, msg.name, msg.msg_data)
+                )
                 return False
         else:
             print("Unrecognized message: %d", msg)
@@ -154,17 +158,25 @@ class PingDevice(object):
         attrs = vars(self)
         for attr in sorted(attrs):
             try:
-                if attr != 'iodev':
-                    representation += "\n  - " + attr + \
-                        "(hex): " + str([hex(item)
-                                         for item in getattr(self, attr)])
-                if attr != 'data':
-                    representation += "\n  - " + attr + \
-                        "(string): " + str(getattr(self, attr))
+                if attr != "iodev":
+                    representation += (
+                        "\n  - "
+                        + attr
+                        + "(hex): "
+                        + str([hex(item) for item in getattr(self, attr)])
+                    )
+                if attr != "data":
+                    representation += (
+                        "\n  - "
+                        + attr
+                        + "(string): "
+                        + str(getattr(self, attr))
+                    )
             # TODO: Better filter this exception
             except:
-                representation += "\n  - " + attr + \
-                    ": " + str(getattr(self, attr))
+                representation += (
+                    "\n  - " + attr + ": " + str(getattr(self, attr))
+                )
         return representation
 
     ##
@@ -182,7 +194,7 @@ class PingDevice(object):
     def get_device_information(self):
         if self.request(definitions.COMMON_DEVICE_INFORMATION) is None:
             return None
-        data = ({
+        data = {
             # Device type. 0: Unknown; 1: Ping Echosounder; 2: Ping360
             "device_type": self._device_type,
             "device_revision": self._device_revision,  # device-specific hardware revision
@@ -192,8 +204,8 @@ class PingDevice(object):
             "firmware_version_minor": self._firmware_version_minor,
             # Firmware version patch number.
             "firmware_version_patch": self._firmware_version_patch,
-            "reserved": self._reserved,        # reserved
-        })
+            "reserved": self._reserved,  # reserved
+        }
         return data
 
     ##
@@ -209,27 +221,36 @@ class PingDevice(object):
     def get_protocol_version(self):
         if self.request(definitions.COMMON_PROTOCOL_VERSION) is None:
             return None
-        data = ({
+        data = {
             # Protocol version major number.
             "version_major": self._version_major,
             # Protocol version minor number.
             "version_minor": self._version_minor,
             # Protocol version patch number.
             "version_patch": self._version_patch,
-            "reserved": self._reserved,        # reserved
-        })
+            "reserved": self._reserved,  # reserved
+        }
         return data
 
 
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Ping python library example.")
-    parser.add_argument('--device', action="store",
-                        required=True, type=str, help="Ping device port.")
-    parser.add_argument('--baudrate', action="store", type=int,
-                        default=115200, help="Ping device baudrate.")
+    parser = argparse.ArgumentParser(description="Ping python library example.")
+    parser.add_argument(
+        "--device",
+        action="store",
+        required=True,
+        type=str,
+        help="Ping device port.",
+    )
+    parser.add_argument(
+        "--baudrate",
+        action="store",
+        type=int,
+        default=115200,
+        help="Ping device baudrate.",
+    )
     args = parser.parse_args()
 
     p = PingDevice(args.device, args.baudrate)

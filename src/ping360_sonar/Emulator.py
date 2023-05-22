@@ -4,7 +4,7 @@ import errno
 import math
 import numpy as np
 import random
-import perlin
+from . import perlin
 
 verbose = False
 payload_dict = definitions.payload_dict_all
@@ -16,12 +16,19 @@ payload_dict = definitions.payload_dict_all
 
 
 class Serial:
-
     # init(): the constructor.  Many of the arguments have default values
     # and can be skipped when calling the constructor.
-    def __init__(self, port='COM1', baudrate=115200, timeout=1,
-                 bytesize=8, parity='N', stopbits=1, xonxoff=0,
-                 rtscts=0):
+    def __init__(
+        self,
+        port="COM1",
+        baudrate=115200,
+        timeout=1,
+        bytesize=8,
+        parity="N",
+        stopbits=1,
+        xonxoff=0,
+        rtscts=0,
+    ):
         self.name = port
         self.port = port
         self.timeout = timeout
@@ -35,7 +42,9 @@ class Serial:
         self._receivedData = ""
         self.in_waiting = 1
 
-        self.parser = PingParser()  # used to parse incoming client comunications
+        self.parser = (
+            PingParser()
+        )  # used to parse incoming client comunications
 
         self._gain_setting = 0
         self._mode = 0
@@ -44,7 +53,7 @@ class Serial:
         self._sample_period = 0
         self._transmit_frequency = 100
         self._number_of_samples = 10
-        self._data = "".join([chr(0) for _ in xrange(self._number_of_samples)])
+        self._data = "".join([chr(0) for _ in range(self._number_of_samples)])
         self._data_length = 10
 
         self._noise = perlin.noise(400, 50, 50)
@@ -86,8 +95,10 @@ class Serial:
 
         except KeyError as e:
             if verbose:
-                print("skipping unrecognized message id: %d" %
-                      self.parser.rx_msg.message_id)
+                print(
+                    "skipping unrecognized message id: %d"
+                    % self.parser.rx_msg.message_id
+                )
                 print("contents: %s" % self.parser.rx_msg.msg_data)
             pass
 
@@ -104,8 +115,8 @@ class Serial:
     def readline(self):
         returnIndex = self._read_data.index("\n")
         if returnIndex != -1:
-            s = self._read_data[0:returnIndex + 1]
-            self._read_data = self._read_data[returnIndex + 1:]
+            s = self._read_data[0 : returnIndex + 1]
+            self._read_data = self._read_data[returnIndex + 1 :]
             return s
         else:
             return ""
@@ -113,11 +124,17 @@ class Serial:
     # __str__()
     # returns a string representation of the serial class
     def __str__(self):
-        return "Serial<id=0xa81c10, open=%s>( port='%s', baudrate=%d," \
-            % (str(self.isOpen), self.port, self.baudrate) \
-            + " bytesize=%d, parity='%s', stopbits=%d, xonxoff=%d, rtscts=%d)" \
-            % (self.bytesize, self.parity, self.stopbits, self.xonxoff,
-               self.rtscts)
+        return "Serial<id=0xa81c10, open=%s>( port='%s', baudrate=%d," % (
+            str(self.isOpen),
+            self.port,
+            self.baudrate,
+        ) + " bytesize=%d, parity='%s', stopbits=%d, xonxoff=%d, rtscts=%d)" % (
+            self.bytesize,
+            self.parity,
+            self.stopbits,
+            self.xonxoff,
+            self.rtscts,
+        )
 
     # Send a message to the client, the message fields are populated by the
     # attributes of this object (either variable or method) with names matching
@@ -147,8 +164,9 @@ class Serial:
     # handle an incoming client message
     def handleMessage(self, message):
         if verbose:
-            print("receive message %d\t(%s)" %
-                  (message.message_id, message.name))
+            print(
+                "receive message %d\t(%s)" % (message.message_id, message.name)
+            )
         if message.message_id == definitions.COMMON_GENERAL_REQUEST:
             # the client is requesting a message from us
             self.sendMessage(message.requested_id)
@@ -177,7 +195,9 @@ class Serial:
         if verbose:
             print("sending a reply %d\t(%s)" % (msg.message_id, msg.name))
         # pull attributes of this class into the message fields (they are named the same)
-        for attr in payload_dict[definitions.PING360_DEVICE_DATA]["field_names"]:
+        for attr in payload_dict[definitions.PING360_DEVICE_DATA][
+            "field_names"
+        ]:
             setattr(msg, attr, getattr(self, "_" + attr))
         # send the message to the client
         msg.pack_msg_data()
@@ -186,13 +206,24 @@ class Serial:
     def generateRandomData(self):
         sigma = 10
 
-        if(self._angle == 0):
+        if self._angle == 0:
             self._noise = perlin.noise(400, 50, 50)
 
         mu = 100 + int(self._noise[self._angle]) + random.randint(-1, 1)
 
-        self._data = "".join([chr(int(255 * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sigma, 2.)))))
-                              for x in range(self._number_of_samples)])
+        self._data = "".join(
+            [
+                chr(
+                    int(
+                        255
+                        * np.exp(
+                            -np.power(x - mu, 2.0) / (2 * np.power(sigma, 2.0))
+                        )
+                    )
+                )
+                for x in range(self._number_of_samples)
+            ]
+        )
 
     #
     # Helpers for generating periodic data

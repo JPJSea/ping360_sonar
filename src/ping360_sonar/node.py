@@ -12,7 +12,7 @@ from sensor_msgs.msg import LaserScan
 
 from ping360_sonar.cfg import sonarConfig
 from ping360_sonar.msg import SonarEcho
-from sensor import Ping360
+from .sensor import Ping360
 
 # Global Variables
 
@@ -74,9 +74,9 @@ def main():
     # Ping 360 Parameters
     device = rospy.get_param("~device", "/dev/ttyUSB0")
     baudrate = rospy.get_param("~baudrate", 115200)
-    udp = rospy.get_param("udp", False)
-    address = rospy.get_param("address", "192.168.1.2")
-    port = rospy.get_param("port", 1234)
+    udp = rospy.get_param("~udp", False)
+    address = rospy.get_param("~address", "192.168.1.2")
+    port = rospy.get_param("~port", 1234)
 
     gain = rospy.get_param("~gain", 0)
     numberOfSamples = rospy.get_param(
@@ -141,6 +141,7 @@ def main():
     # Make a new Ping
     sensor = Ping360()
     if not udp:
+        print(f"udp {udp}")
         sensor.connect_serial(device, baudrate)
     else:
         sensor.connect_udp(address, int(port))

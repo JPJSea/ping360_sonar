@@ -4,14 +4,11 @@
 # A device API for the Blue Robotics Ping360 scanning sonar
 
 from brping import definitions
-from device import PingDevice
+from brping import PingDevice
 from brping import pingmessage
-import serial
-import time
 
 
 class Ping360(PingDevice):
-
     _gain_setting = 0
     _mode = 0
     _angle = 0
@@ -23,7 +20,7 @@ class Ping360(PingDevice):
     def initialize(self):
         if not PingDevice.initialize(self):
             return False
-        if (self.readDeviceInformation() is None):
+        if self.readDeviceInformation() is None:
             return False
         return True
 
@@ -50,7 +47,7 @@ class Ping360(PingDevice):
     def get_device_data(self):
         if self.request(definitions.PING360_DEVICE_DATA) is None:
             return None
-        data = ({
+        data = {
             "mode": self._mode,  # Operating mode (1 for Ping360)
             # Analog gain setting (0 = low, 1 = normal, 2 = high)
             "gain_setting": self._gain_setting,
@@ -66,8 +63,8 @@ class Ping360(PingDevice):
             "transmit_frequency": self._transmit_frequency,
             # Number of samples per reflected signal
             "number_of_samples": self._number_of_samples,
-            "data": self._data,        # 8 bit binary data array representing sonar echo strength
-        })
+            "data": self._data,  # 8 bit binary data array representing sonar echo strength
+        }
         return data
 
     ##
@@ -91,7 +88,7 @@ class Ping360(PingDevice):
         if self.request(definitions.PING360_DEVICE_ID) is None:
             return False
         # Read back the data and check that changes have been applied
-        if (verify and (self._id != id or self._reserved != reserved)):
+        if verify and (self._id != id or self._reserved != reserved):
             return False
         return True  # success        m.id = id
         m.reserved = reserved
@@ -105,18 +102,28 @@ class Ping360(PingDevice):
         m.pack_msg_data()
         self.write(m.msg_data)
 
-    def control_transducer(self, mode, gain_setting, angle, transmit_duration,
-                           sample_period, transmit_frequency, number_of_samples, transmit, reserved):
+    def control_transducer(
+        self,
+        mode,
+        gain_setting,
+        angle,
+        transmit_duration,
+        sample_period,
+        transmit_frequency,
+        number_of_samples,
+        transmit,
+        reserved,
+    ):
         m = pingmessage.PingMessage(definitions.PING360_TRANSDUCER)
-        m.mode = mode
-        m.gain_setting = gain_setting
-        m.angle = angle
-        m.transmit_duration = transmit_duration
-        m.sample_period = sample_period
-        m.transmit_frequency = transmit_frequency
-        m.number_of_samples = number_of_samples
-        m.transmit = transmit
-        m.reserved = reserved
+        m.mode = int(mode)
+        m.gain_setting = int(gain_setting)
+        m.angle = int(angle)
+        m.transmit_duration = int(transmit_duration)
+        m.sample_period = int(sample_period)
+        m.transmit_frequency = int(transmit_frequency)
+        m.number_of_samples = int(number_of_samples)
+        m.transmit = int(transmit)
+        m.reserved = int(reserved)
         m.pack_msg_data()
         self.write(m.msg_data)
 
@@ -130,9 +137,11 @@ class Ping360(PingDevice):
             self._transmit_frequency,
             self._number_of_samples,
             0,
-            0
+            0,
         )
-        return self.wait_message([definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0)
+        return self.wait_message(
+            [definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0
+        )
 
     def set_gain_setting(self, gain_setting):
         self.control_transducer(
@@ -144,9 +153,11 @@ class Ping360(PingDevice):
             self._transmit_frequency,
             self._number_of_samples,
             0,
-            0
+            0,
         )
-        return self.wait_message([definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0)
+        return self.wait_message(
+            [definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0
+        )
 
     def set_angle(self, angle):
         self.control_transducer(
@@ -158,23 +169,27 @@ class Ping360(PingDevice):
             self._transmit_frequency,
             self._number_of_samples,
             0,
-            0
+            0,
         )
-        return self.wait_message([definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0)
+        return self.wait_message(
+            [definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0
+        )
 
     def set_transmit_duration(self, transmit_duration):
         self.control_transducer(
-            self._mode,
-            self._gain_setting,
-            self._angle,
-            transmit_duration,
-            self._sample_period,
-            self._transmit_frequency,
-            self._number_of_samples,
-            0,
-            0
+            int(self._mode),
+            int(self._gain_setting),
+            int(self._angle),
+            int(transmit_duration),
+            int(self._sample_period),
+            int(self._transmit_frequency),
+            int(self._number_of_samples),
+            int(0),
+            int(0),
         )
-        return self.wait_message([definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0)
+        return self.wait_message(
+            [definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0
+        )
 
     def set_sample_period(self, sample_period):
         self.control_transducer(
@@ -186,9 +201,11 @@ class Ping360(PingDevice):
             self._transmit_frequency,
             self._number_of_samples,
             0,
-            0
+            0,
         )
-        return self.wait_message([definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0)
+        return self.wait_message(
+            [definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0
+        )
 
     def set_transmit_frequency(self, transmit_frequency):
         self.control_transducer(
@@ -200,9 +217,11 @@ class Ping360(PingDevice):
             transmit_frequency,
             self._number_of_samples,
             0,
-            0
+            0,
         )
-        return self.wait_message([definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0)
+        return self.wait_message(
+            [definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0
+        )
 
     def set_number_of_samples(self, number_of_samples):
         self.control_transducer(
@@ -214,9 +233,11 @@ class Ping360(PingDevice):
             self._transmit_frequency,
             number_of_samples,
             0,
-            0
+            0,
         )
-        return self.wait_message([definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0)
+        return self.wait_message(
+            [definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0
+        )
 
     def readDeviceInformation(self):
         return self.request(definitions.PING360_DEVICE_DATA)
@@ -231,9 +252,11 @@ class Ping360(PingDevice):
             self._transmit_frequency,
             self._number_of_samples,
             1,
-            0
+            0,
         )
-        return self.wait_message([definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0)
+        return self.wait_message(
+            [definitions.PING360_DEVICE_DATA, definitions.COMMON_NACK], 4.0
+        )
 
     def transmit(self):
         return self.transmitAngle(self._angle)

@@ -110,7 +110,7 @@ generate_dynamic_reconfigure_options(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES sonar-ping360
+  LIBRARIES sonar-ping360
 #  CATKIN_DEPENDS cv_bridge rospy sensor_msgs std_msgs
 #  DEPENDS system_lib
 )
